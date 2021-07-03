@@ -3,6 +3,8 @@ import streamlit.components.v1 as components
 from typing import Optional
 import json
 
+__version__ = "0.1.0"
+
 _RELEASE = False
 
 if not _RELEASE:
