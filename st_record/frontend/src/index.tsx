@@ -1,29 +1,77 @@
-import { Streamlit, RenderData } from "streamlit-component-lib"
+import { Streamlit, RenderData } from 'streamlit-component-lib'
 
-// Add text and a button to the DOM. (You could also add these directly
-// to index.html.)
-const span = document.body.appendChild(document.createElement("span"))
-const textNode = span.appendChild(document.createTextNode(""))
-const button = span.appendChild(document.createElement("button"))
-button.textContent = "Click Me!"
+// Our component has three parts
+// 1. Record/Stop button
+// 2. Audio player to play back the audio
+// 3. Submit button to send data to the backend
+const span = document.body.appendChild(document.createElement('span'))
+const recordButton = span.appendChild(document.createElement('button'))
+const audio = span.appendChild(document.createElement('audio'))
+const submitButton = span.appendChild(document.createElement('button'))
 
-// Add a click handler to our button. It will send data back to Streamlit.
-let numClicks = 0
-let isFocused = false
-button.onclick = function(): void {
-  // Increment numClicks, and pass the new value back to
-  // Streamlit via `Streamlit.setComponentValue`.
-  numClicks += 1
-  Streamlit.setComponentValue(numClicks)
+recordButton.textContent = 'record'
+submitButton.textContent = 'submit'
+
+let recordedChunks: any[] = []
+
+let state = {
+  recording: false,
+  recorded: false
 }
 
-button.onfocus = function(): void {
-  isFocused = true
+let isFocused = {
+  record: true,
+  submit: false
 }
 
-button.onblur = function(): void {
-  isFocused = false
+submitButton.onclick = function(): void {
+  // Assume that recording is done, just send the recorded chunks to backend
+  let blob = new Blob(recordedChunks)
+  blob.arrayBuffer().then(buf => {
+    var arr = Array.from(new Uint8Array(buf))
+    Streamlit.setComponentValue(arr)
+  })
 }
+
+recordButton.onfocus = function(): void { isFocused.record = true }
+recordButton.onblur = function(): void { isFocused.record = false }
+submitButton.onfocus = function(): void { isFocused.submit = true }
+submitButton.onblur = function(): void { isFocused.submit = false }
+
+const handleSuccess = function(stream: any): void {
+  const options = { mimeType: 'audio/ogg' }
+  // @ts-ignore
+  const mediaRecorder = new MediaRecorder(stream, options)
+
+  mediaRecorder.addEventListener('stop', function(): void {
+    state.recorded = true
+    state.recording = false
+    submitButton.disabled = false
+  })
+
+  mediaRecorder.addEventListener('dataavailable', function(e: any): void {
+    if (e.data.size > 0) {
+      recordedChunks.push(e.data)
+    }
+  })
+
+  recordButton.onclick = function(): void {
+    if (state.recording === true) {
+      mediaRecorder.stop()
+      state.recording = false
+      state.recorded = true
+      recordButton.textContent = 'record'
+    } else {
+      recordedChunks = []
+      mediaRecorder.start()
+      state.recording = true
+      state.recorded = false
+      recordButton.textContent = 'stop'
+    }
+  }
+}
+
+navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(handleSuccess)
 
 /**
  * The component's render function. This will be called immediately after
@@ -31,7 +79,6 @@ button.onblur = function(): void {
  * component gets new data from Python.
  */
 function onRender(event: Event): void {
-  // Get the RenderData from the event
   const data = (event as CustomEvent<RenderData>).detail
 
   // Maintain compatibility with older versions of Streamlit that don't send
@@ -42,34 +89,17 @@ function onRender(event: Event): void {
     const borderStyling = `1px solid var(${
       isFocused ? "--primary-color" : "gray"
     })`
-    button.style.border = borderStyling
-    button.style.outline = borderStyling
+    recordButton.style.border = borderStyling
+    submitButton.style.border = borderStyling
+    recordButton.style.outline = borderStyling
+    submitButton.style.outline = borderStyling
   }
 
-  // Disable our button if necessary.
-  button.disabled = data.disabled
+  recordButton.disabled = data.disabled
+  submitButton.disabled = data.disabled
 
-  // RenderData.args is the JSON dictionary of arguments sent from the
-  // Python script.
-  let name = data.args["name"]
-
-  // Show "Hello, name!" with a non-breaking space afterwards.
-  textNode.textContent = `Hello, ${name}! ` + String.fromCharCode(160)
-
-  // We tell Streamlit to update our frameHeight after each render event, in
-  // case it has changed. (This isn't strictly necessary for the example
-  // because our height stays fixed, but this is a low-cost function, so
-  // there's no harm in doing it redundantly.)
   Streamlit.setFrameHeight()
 }
-
-// Attach our `onRender` handler to Streamlit's render event.
 Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender)
-
-// Tell Streamlit we're ready to start receiving data. We won't get our
-// first RENDER_EVENT until we call this function.
 Streamlit.setComponentReady()
-
-// Finally, tell Streamlit to update our initial height. We omit the
-// `height` parameter here to have it default to our scrollHeight.
 Streamlit.setFrameHeight()
