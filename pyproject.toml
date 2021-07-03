@@ -3,6 +3,8 @@ name = "st-record"
 version = "0.1.1"
 description = "Streamlit component for recording audio."
 authors = ["Abhinav Tushar <abhinav@lepisma.xyz>"]
+exclude = ["st_record/frontend/**/*"]
+include = ["st_record/frontend/build/**/*"]
 
 [tool.poetry.dependencies]
 python = "^3.9"

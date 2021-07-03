@@ -1,7 +1,8 @@
+import json
+from typing import Optional
+
 import importlib_resources
 import streamlit.components.v1 as components
-from typing import Optional
-import json
 
 __version__ = "0.1.1"
 
@@ -29,15 +30,3 @@ def st_record(key=None) -> Optional[bytes]:
     if serialized:
         array = json.loads(serialized)
         return bytes(array)
-
-
-if not _RELEASE:
-    import streamlit as st
-    import librosa
-    import io
-
-    st.title("st-record")
-    bs = st_record()
-
-    if bs:
-        y, sr = librosa.load(io.BytesIO(bs))
