@@ -23,7 +23,7 @@ else:
 
 def st_record(key=None) -> Optional[bytes]:
     """
-    Return ogg encoded audio bytes.
+    Return webm encoded audio bytes.
     """
 
     serialized = _st_record(key=key)

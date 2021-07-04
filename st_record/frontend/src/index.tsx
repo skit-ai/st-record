@@ -39,7 +39,7 @@ submitButton.onfocus = function(): void { isFocused.submit = true }
 submitButton.onblur = function(): void { isFocused.submit = false }
 
 const handleSuccess = function(stream: any): void {
-  const options = { mimeType: 'audio/ogg' }
+  const options = { mimeType: 'audio/webm' }
   // @ts-ignore
   const mediaRecorder = new MediaRecorder(stream, options)
 
